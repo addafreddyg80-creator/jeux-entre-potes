@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: jeux-entre-potes
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: SECRET
+        generateValue: true
+      - key: NODE_VERSION
+        value: "20"
