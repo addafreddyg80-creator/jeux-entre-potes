@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0d0f1a"><title>Arène — Jeux entre potes</title>
+<link rel="stylesheet" href="./style.css">
+</head><body>
+<div id="app"></div>
+<nav id="tabs" class="hidden">
+  <a href="#/jeux" data-t="jeux"><span>🎮</span>Jeux</a>
+  <a href="#/recherche" data-t="recherche"><span>🔎</span>Joueurs</a>
+  <a href="#/messages" data-t="messages"><span>💬</span>Messages<b id="unread" class="badge hidden">0</b></a>
+  <a href="#/profil" data-t="profil"><span>👤</span>Profil</a>
+</nav>
+<div id="toast"></div>
+<div id="game" class="hidden">
+  <canvas id="cv"></canvas>
+  <div id="hud"><div class="team" id="hl"></div><div id="score">0 - 0</div><div class="team r" id="hr"></div><div id="timer">60</div></div>
+  <button id="quit" class="ghost">✕</button>
+  <div id="banner" class="hidden"></div>
+  <div id="rotate">📱↻<br>Tourne ton téléphone en paysage</div>
+</div>
+
+<script src="./vendor/matter.js"></script>
+<script src="./game/sim.js"></script>
+<script src="./game/foot.js"></script>
+<script src="./app.js"></script>
+</body></html>
