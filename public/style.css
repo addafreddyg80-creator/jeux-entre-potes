@@ -54,5 +54,5 @@ nav#tabs .badge{position:absolute;top:4px;left:55%}
 #banner.anim{animation:but 1.6s ease-out}
 #banner small{display:block;font-size:.25em;text-shadow:0 2px 6px #000}
 @keyframes but{0%{transform:translate(-50%,-50%) scale(.2) rotate(-20deg);opacity:0}25%{transform:translate(-50%,-50%) scale(1.25) rotate(4deg);opacity:1}40%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(-50%,-50%) scale(1)}}
-#rotate{display:none;position:absolute;inset:0;background:#0d0f1aee;align-items:center;justify-content:center;text-align:center;font-size:22px;font-weight:700;line-height:2}
-@media (orientation:portrait) and (max-width:700px){#rotate{display:flex}}
+
+#hud{max-width:calc(100vw - 110px);gap:8px;padding:6px 10px}#hud .team{font-size:12px;max-width:28vw;overflow:hidden;white-space:nowrap}#banner{font-size:min(16vw,110px)}

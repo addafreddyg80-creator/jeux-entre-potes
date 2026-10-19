@@ -3,9 +3,9 @@
   if (typeof module === 'object' && module.exports) module.exports = factory(require('matter-js'));
   else root.FootSim = factory(root.Matter);
 })(typeof self !== 'undefined' ? self : this, function (Matter) {
-  const { Engine, Bodies, Body, Composite, Constraint, Events } = Matter;
-  const W = 1000, H = 500, GROUND = 470, GOAL_TOP = 325, GOAL_D = 55;
-  const MATCH_TIME = 60, COOLDOWN = 0.75, MAX_SPEED = 21;
+  const { Engine, Bodies, Body, Composite } = Matter;
+  const W = 500, H = 860, GOAL_W = 128, GOAL_D = 40, PR = 30, BR = 17;
+  const MATCH_TIME = 60, COOLDOWN = 0.7, MAX_SPEED = 24;
 
   const COUNTRIES = [
     { id: 'fr', name: 'France', flag: '🇫🇷', c1: '#1f4fd1', c2: '#ffffff' },
@@ -28,63 +28,44 @@
     { id: 'mx', name: 'Mexique', flag: '🇲🇽', c1: '#006847', c2: '#ce1126' },
   ];
 
-  function makeDummy(x, side, group) {
-    const f = { group, category: 0x0002, mask: 0xffff };
-    const o = { collisionFilter: f, friction: 0.6, restitution: 0.3, frictionAir: 0.012 };
-    const torso = Bodies.rectangle(x, GROUND - 75, 22, 44, { ...o, density: 0.004, chamfer: { radius: 8 } });
-    const head = Bodies.circle(x, GROUND - 112, 15, { ...o, density: 0.002 });
-    const armL = Bodies.rectangle(x - 16, GROUND - 78, 8, 30, { ...o, density: 0.001, chamfer: { radius: 4 } });
-    const armR = Bodies.rectangle(x + 16, GROUND - 78, 8, 30, { ...o, density: 0.001, chamfer: { radius: 4 } });
-    const legL = Bodies.rectangle(x - 6, GROUND - 32, 10, 38, { ...o, density: 0.003, chamfer: { radius: 5 } });
-    const legR = Bodies.rectangle(x + 6, GROUND - 32, 10, 38, { ...o, density: 0.003, chamfer: { radius: 5 } });
-    const parts = [torso, head, armL, armR, legL, legR];
-    const c = (a, pa, b, pb, s = 0.6) => Constraint.create({ bodyA: a, pointA: pa, bodyB: b, pointB: pb, stiffness: s, length: 0 });
-    const cons = [
-      c(torso, { x: 0, y: -24 }, head, { x: 0, y: 13 }, 0.9),
-      c(torso, { x: -10, y: -18 }, armL, { x: 0, y: -13 }),
-      c(torso, { x: 10, y: -18 }, armR, { x: 0, y: -13 }),
-      c(torso, { x: -6, y: 20 }, legL, { x: 0, y: -17 }, 0.8),
-      c(torso, { x: 6, y: 20 }, legR, { x: 0, y: -17 }, 0.8),
-    ];
-    return { parts, cons, torso, side, cooldown: 0 };
+  // Joueurs = disques pleins (vue de dessus, sans gravité)
+  function makeDummy(x, y, side) {
+    const body = Bodies.circle(x, y, PR, { restitution: 0.6, friction: 0.02, frictionAir: 0.035, density: 0.004 });
+    return { body, torso: body, parts: [body], side, cooldown: 0, home: { x, y } };
   }
 
   function create(opts = {}) {
-    const engine = Engine.create({ gravity: { x: 0, y: 1.1 } });
+    const engine = Engine.create({ gravity: { x: 0, y: 0 } });
     engine.positionIterations = 8; engine.velocityIterations = 6;
-    const st = { isStatic: true, friction: 0.8, restitution: 0.4 };
+    const st = { isStatic: true, friction: 0, restitution: 0.8 };
+    const gx0 = (W - GOAL_W) / 2, gx1 = (W + GOAL_W) / 2, T = 60;
+    const side = (x0, x1, y) => Bodies.rectangle((x0 + x1) / 2, y, x1 - x0, T, st);
     const statics = [
-      Bodies.rectangle(W / 2, GROUND + 40, W * 2, 80, st), // sol
-      Bodies.rectangle(W / 2, -40, W * 2, 80, st), // plafond
-      Bodies.rectangle(-30, H / 2, 60, H * 2, st),
-      Bodies.rectangle(W + 30, H / 2, 60, H * 2, st),
-      // barres transversales (inclinées pour faire glisser la balle)
-      Bodies.rectangle(GOAL_D / 2, GOAL_TOP, GOAL_D + 10, 10, { ...st, angle: 0.15 }),
-      Bodies.rectangle(W - GOAL_D / 2, GOAL_TOP, GOAL_D + 10, 10, { ...st, angle: -0.15 }),
+      Bodies.rectangle(-T / 2, H / 2, T, H + 400, st), Bodies.rectangle(W + T / 2, H / 2, T, H + 400, st),
+      side(-T, gx0, -T / 2), side(gx1, W + T, -T / 2), side(-T, gx0, H + T / 2), side(gx1, W + T, H + T / 2),
+      // fonds de but
+      Bodies.rectangle(W / 2, -GOAL_D - T / 2, GOAL_W + 2 * T, T, st), Bodies.rectangle(W / 2, H + GOAL_D + T / 2, GOAL_W + 2 * T, T, st),
+      // coins arrondis (évite les blocages)
+      ...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Bodies.rectangle(x, y, 60, 60, { ...st, angle: Math.PI / 4 })),
     ];
-    const ball = Bodies.circle(W / 2, 200, 17, { restitution: 0.75, friction: 0.05, frictionAir: 0.006, density: 0.0012 });
-    const d0 = makeDummy(250, 0, -1), d1 = makeDummy(750, 1, -2);
-    Composite.add(engine.world, [...statics, ball, ...d0.parts, ...d0.cons, ...d1.parts, ...d1.cons]);
+    const ball = Bodies.circle(W / 2, H / 2, BR, { restitution: 0.85, friction: 0.01, frictionAir: 0.012, density: 0.0012 });
+    const d0 = makeDummy(W / 2, H - 150, 0), d1 = makeDummy(W / 2, 150, 1);
+    Composite.add(engine.world, [...statics, ball, d0.body, d1.body]);
     const g = {
       engine, ball, dummies: [d0, d1], score: [0, 0], time: opts.time || MATCH_TIME,
       phase: 'kickoff', phaseT: 1.2, events: [], over: false, lastScorer: -1,
     };
-    resetPositions(g, 0);
+    resetPositions(g, -1);
     return g;
   }
 
-  function placeDummy(d, x) {
-    const offs = [[0, -75], [0, -112], [-16, -78], [16, -78], [-6, -32], [6, -32]];
-    d.parts.forEach((p, i) => {
-      Body.setPosition(p, { x: x + offs[i][0], y: GROUND + offs[i][1] });
-      Body.setAngle(p, 0); Body.setVelocity(p, { x: 0, y: 0 }); Body.setAngularVelocity(p, 0);
-    });
-    d.cooldown = 0;
-  }
   function resetPositions(g, towards) {
-    placeDummy(g.dummies[0], 260); placeDummy(g.dummies[1], 740);
-    Body.setPosition(g.ball, { x: W / 2, y: 150 });
-    Body.setVelocity(g.ball, { x: towards === 0 ? -1.5 : towards === 1 ? 1.5 : 0, y: 0 });
+    for (const d of g.dummies) {
+      Body.setPosition(d.body, d.home); Body.setVelocity(d.body, { x: 0, y: 0 }); Body.setAngle(d.body, 0); Body.setAngularVelocity(d.body, 0); d.cooldown = 0;
+    }
+    Body.setPosition(g.ball, { x: W / 2, y: H / 2 });
+    // engagement : léger avantage à celui qui a encaissé
+    Body.setVelocity(g.ball, { x: 0, y: towards === 0 ? 1.2 : towards === 1 ? -1.2 : 0 });
     Body.setAngularVelocity(g.ball, 0);
   }
 
@@ -95,12 +76,8 @@
     let { dx, dy, power } = inp;
     const len = Math.hypot(dx, dy) || 1; dx /= len; dy /= len;
     power = Math.max(0.15, Math.min(1, power || 0));
-    const v = { x: dx * MAX_SPEED * power, y: dy * MAX_SPEED * power };
-    d.parts.forEach((p, i) => {
-      const j = i === 0 ? 1 : 0.85 + Math.random() * 0.3; // un peu de chaos
-      Body.setVelocity(p, { x: v.x * j, y: v.y * j });
-    });
-    Body.setAngularVelocity(d.torso, (dx >= 0 ? 1 : -1) * (0.15 + Math.random() * 0.2));
+    Body.setVelocity(d.body, { x: dx * MAX_SPEED * power, y: dy * MAX_SPEED * power });
+    Body.setAngularVelocity(d.body, (Math.random() - 0.5) * 0.4);
     d.cooldown = COOLDOWN;
     g.events.push({ t: 'launch', side });
     return true;
@@ -109,26 +86,31 @@
   function botThink(g, side, dt, level = 1) {
     const d = g.dummies[side];
     if (g.phase !== 'play' || d.cooldown > 0) return;
-    if (Math.random() > dt * (1.6 + level)) return; // temps de réaction
-    const b = g.ball.position, t = d.torso.position;
-    const goalX = side === 0 ? W : 0;
-    const dir = Math.sign(goalX - b.x);
-    const tx = b.x - dir * 22 + (Math.random() - 0.5) * 40;
-    const ty = b.y - 10;
-    let dx = tx - t.x, dy = ty - t.y - Math.abs(tx - t.x) * 0.35; // trajectoire en cloche
-    const dist = Math.hypot(dx, dy);
-    launch(g, side, { dx, dy, power: Math.min(1, 0.35 + dist / 650) });
+    if (Math.random() > dt * (1.2 + level)) return; // temps de réaction
+    const b = g.ball.position, p = d.body.position;
+    const goal = { x: W / 2, y: side === 0 ? -GOAL_D : H + GOAL_D }; // but visé
+    const own = side === 0 ? H : 0;
+    const err = (3 - level) * 25;
+    let tx, ty;
+    const behind = side === 1 ? p.y < b.y : p.y > b.y; // le bot est entre son but et la balle
+    if (behind) {
+      // viser un point derrière la balle, aligné vers le but adverse
+      let ux = b.x - goal.x, uy = b.y - goal.y; const l = Math.hypot(ux, uy) || 1;
+      tx = b.x + ux / l * (BR + PR - 10); ty = b.y + uy / l * (BR + PR - 10);
+    } else {
+      // revenir défendre côté de son propre but
+      tx = (b.x + W / 2) / 2; ty = own + (side === 1 ? 110 : -110);
+    }
+    tx += (Math.random() - 0.5) * err; ty += (Math.random() - 0.5) * err;
+    const dx = tx - p.x, dy = ty - p.y, dist = Math.hypot(dx, dy);
+    if (dist < 15) return;
+    launch(g, side, { dx, dy, power: Math.min(1, 0.4 + dist / 500) * (0.7 + level * 0.1) });
   }
 
   function step(g, dt) {
     g.events.length = 0;
     if (g.over) return g;
-    for (const d of g.dummies) {
-      d.cooldown = Math.max(0, d.cooldown - dt);
-      // aide à se relever : couple léger vers la verticale
-      const a = d.torso.angle % (Math.PI * 2);
-      Body.setAngularVelocity(d.torso, d.torso.angularVelocity * 0.98 - Math.sin(a) * 0.004);
-    }
+    for (const d of g.dummies) d.cooldown = Math.max(0, d.cooldown - dt);
     if (g.phase === 'kickoff' || g.phase === 'goal') {
       g.phaseT -= dt;
       if (g.phase === 'goal') Engine.update(g.engine, dt * 1000 * 0.4);
@@ -140,15 +122,11 @@
       return g;
     }
     Engine.update(g.engine, dt * 1000);
-    // sécurité vitesse balle
     const bv = g.ball.velocity, sp = Math.hypot(bv.x, bv.y);
-    if (sp > 28) Body.setVelocity(g.ball, { x: bv.x * 28 / sp, y: bv.y * 28 / sp });
+    if (sp > 26) Body.setVelocity(g.ball, { x: bv.x * 26 / sp, y: bv.y * 26 / sp });
     const b = g.ball.position;
-    if (b.y > GOAL_TOP + 8) {
-      if (b.x < GOAL_D - 12) return goal(g, 1);
-      if (b.x > W - GOAL_D + 12) return goal(g, 0);
-    }
-    // anti-coincement balle sur une barre
+    if (b.y < -BR) return goal(g, 0); // but du haut : marqué par le joueur du bas (0)
+    if (b.y > H + BR) return goal(g, 1);
     g.time -= dt;
     if (g.time <= 0) { g.time = 0; return finish(g); }
     return g;
@@ -173,5 +151,5 @@
     return { s, sc: g.score, t: Math.ceil(g.time), ph: g.phase, cd: g.dummies.map((d) => r(d.cooldown)) };
   }
   // état "rendu" depuis la sim locale (même format)
-  return { W, H, GROUND, GOAL_TOP, GOAL_D, COUNTRIES, MATCH_TIME, COOLDOWN, create, step, launch, botThink, snapshot };
+  return { W, H, GOAL_W, GOAL_D, PR, BR, COUNTRIES, MATCH_TIME, COOLDOWN, create, step, launch, botThink, snapshot };
 });
