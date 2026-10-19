@@ -4,7 +4,7 @@
   else root.FootSim = factory(root.Matter);
 })(typeof self !== 'undefined' ? self : this, function (Matter) {
   const { Engine, Bodies, Body, Composite } = Matter;
-  const W = 500, H = 860, GOAL_W = 128, GOAL_D = 40, PR = 30, BR = 17;
+  const W = 500, H = 860, GOAL_W = 128, GOAL_D = 40, PR = 38, BR = 17;
   const MATCH_TIME = 60, COOLDOWN = 0.35, MAX_SPEED = 32;
 
   const COUNTRIES = [
@@ -30,7 +30,7 @@
 
   // Joueurs = disques pleins (vue de dessus, sans gravité)
   function makeDummy(x, y, side) {
-    const body = Bodies.circle(x, y, PR, { restitution: 0.6, friction: 0.02, frictionAir: 0.022, density: 0.003 });
+    const body = Bodies.circle(x, y, PR, { restitution: 0.6, friction: 0.02, frictionAir: 0.022, density: 0.0019 });
     return { body, torso: body, parts: [body], side, cooldown: 0, home: { x, y } };
   }
 

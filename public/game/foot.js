@@ -50,12 +50,12 @@ window.Foot = (function () {
   function drawPlayer(x, y, k, c, me) {
     ctx.fillStyle = '#0005'; ctx.beginPath(); ctx.arc(x + 4, y + 6, PR, 0, 7); ctx.fill();
     ctx.fillStyle = COL[k]; ctx.beginPath(); ctx.arc(x, y, PR, 0, 7); ctx.fill();
-    ctx.lineWidth = 6; ctx.strokeStyle = c.c1; ctx.beginPath(); ctx.arc(x, y, PR - 3, 0, 7); ctx.stroke(); // anneau couleur d'équipe
+    ctx.lineWidth = 7; ctx.strokeStyle = c.c1; ctx.beginPath(); ctx.arc(x, y, PR - 4, 0, 7); ctx.stroke(); // anneau couleur d'équipe
     ctx.lineWidth = 2; ctx.strokeStyle = '#000a'; ctx.beginPath(); ctx.arc(x, y, PR, 0, 7); ctx.stroke();
-    ctx.fillStyle = '#ffffff40'; ctx.beginPath(); ctx.arc(x - 9, y - 9, 9, 0, 7); ctx.fill();
+    ctx.fillStyle = '#ffffff40'; ctx.beginPath(); ctx.arc(x - 11, y - 11, 11, 0, 7); ctx.fill();
     ctx.save(); ctx.translate(x, y); if (flip()) ctx.rotate(Math.PI);
-    ctx.font = '22px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(c.flag, 0, 1);
-    if (me) { ctx.fillStyle = '#ffe066'; ctx.beginPath(); ctx.moveTo(-8, -PR - 16); ctx.lineTo(8, -PR - 16); ctx.lineTo(0, -PR - 6); ctx.fill(); }
+    ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(c.flag, 0, 1);
+    if (me) { ctx.fillStyle = '#ffe066'; ctx.beginPath(); ctx.moveTo(-10, -PR - 18); ctx.lineTo(10, -PR - 18); ctx.lineTo(0, -PR - 6); ctx.fill(); }
     ctx.restore();
   }
   function drawBall(x, y, a) {
