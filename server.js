@@ -141,7 +141,7 @@ const DB_FILE = path.join(DATA_DIR, 'data.db');
     sock.on('msg:read', ({ from }) => run('UPDATE messages SET read=1 WHERE from_id=? AND to_id=?', [+from, uid]));
 
     sock.on('room:create', ({ country, time }, cb) => {
-      const room = { code: newCode(), players: [], time: [180, 300, 600].includes(+time) ? +time : 180 }; rooms.set(room.code, room);
+      const room = { code: newCode(), players: [], time: [45, 60, 90, 120].includes(+time) ? +time : 60 }; rooms.set(room.code, room);
       joinRoom(sock, room, country); cb && cb({ code: room.code });
     });
     sock.on('room:join', ({ code, country }, cb) => {

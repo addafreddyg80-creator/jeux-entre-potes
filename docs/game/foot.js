@@ -95,7 +95,7 @@ window.Foot = (function () {
   function aimFromDrag() {
     const d = st.drag; const dx = d.cur.x - d.start.x, dy = d.cur.y - d.start.y; // le rond part dans le sens du glissé
     const len = Math.hypot(dx, dy);
-    return { dx: dx / (len || 1), dy: dy / (len || 1), power: Math.min(1, len / 140) };
+    return { dx: dx / (len || 1), dy: dy / (len || 1), power: Math.min(1, len / 110) };
   }
   cv.addEventListener('pointerdown', (e) => { if (!st) return; cv.setPointerCapture(e.pointerId); const p = toWorld(e.clientX, e.clientY); st.drag = { start: p, cur: p }; });
   cv.addEventListener('pointermove', (e) => { if (st && st.drag) st.drag.cur = toWorld(e.clientX, e.clientY); });

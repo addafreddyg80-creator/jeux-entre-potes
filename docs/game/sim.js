@@ -5,7 +5,7 @@
 })(typeof self !== 'undefined' ? self : this, function (Matter) {
   const { Engine, Bodies, Body, Composite } = Matter;
   const W = 500, H = 860, GOAL_W = 128, GOAL_D = 40, PR = 30, BR = 17;
-  const MATCH_TIME = 180, COOLDOWN = 0.7, MAX_SPEED = 24;
+  const MATCH_TIME = 60, COOLDOWN = 0.35, MAX_SPEED = 32;
 
   const COUNTRIES = [
     { id: 'fr', name: 'France', flag: '🇫🇷', c1: '#1f4fd1', c2: '#ffffff' },
@@ -30,7 +30,7 @@
 
   // Joueurs = disques pleins (vue de dessus, sans gravité)
   function makeDummy(x, y, side) {
-    const body = Bodies.circle(x, y, PR, { restitution: 0.6, friction: 0.02, frictionAir: 0.035, density: 0.004 });
+    const body = Bodies.circle(x, y, PR, { restitution: 0.6, friction: 0.02, frictionAir: 0.022, density: 0.003 });
     return { body, torso: body, parts: [body], side, cooldown: 0, home: { x, y } };
   }
 
@@ -75,7 +75,7 @@
     if (g.phase !== 'play' || d.cooldown > 0 || !inp) return false;
     let { dx, dy, power } = inp;
     const len = Math.hypot(dx, dy) || 1; dx /= len; dy /= len;
-    power = Math.max(0.15, Math.min(1, power || 0));
+    power = Math.max(0.3, Math.min(1, Math.sqrt(power || 0)));
     Body.setVelocity(d.body, { x: dx * MAX_SPEED * power, y: dy * MAX_SPEED * power });
     Body.setAngularVelocity(d.body, (Math.random() - 0.5) * 0.4);
     d.cooldown = COOLDOWN;
