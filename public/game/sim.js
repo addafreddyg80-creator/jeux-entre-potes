@@ -5,27 +5,36 @@
 })(typeof self !== 'undefined' ? self : this, function (Matter) {
   const { Engine, Bodies, Body, Composite } = Matter;
   const W = 500, H = 860, GOAL_W = 128, GOAL_D = 40, PR = 38, BR = 17;
-  const MATCH_TIME = 60, COOLDOWN = 0.35, MAX_SPEED = 32;
+  const MATCH_TIME = 60, COOLDOWN = 0.08, MAX_SPEED = 32;
 
+  // f: couleurs du drapeau, d: 'v' bandes verticales, 'h' horizontales, 'c' concentrique, '+' croix
   const COUNTRIES = [
-    { id: 'fr', name: 'France', flag: '🇫🇷', c1: '#1f4fd1', c2: '#ffffff' },
-    { id: 'bj', name: 'Bénin', flag: '🇧🇯', c1: '#0a8f3c', c2: '#fcd116' },
-    { id: 'ci', name: "Côte d'Ivoire", flag: '🇨🇮', c1: '#f77f00', c2: '#ffffff' },
-    { id: 'sn', name: 'Sénégal', flag: '🇸🇳', c1: '#00853f', c2: '#fdef42' },
-    { id: 'cm', name: 'Cameroun', flag: '🇨🇲', c1: '#007a5e', c2: '#ce1126' },
-    { id: 'ma', name: 'Maroc', flag: '🇲🇦', c1: '#c1272d', c2: '#006233' },
-    { id: 'ng', name: 'Nigeria', flag: '🇳🇬', c1: '#008751', c2: '#ffffff' },
-    { id: 'gh', name: 'Ghana', flag: '🇬🇭', c1: '#ffffff', c2: '#ce1126' },
-    { id: 'br', name: 'Brésil', flag: '🇧🇷', c1: '#ffdf00', c2: '#009c3b' },
-    { id: 'ar', name: 'Argentine', flag: '🇦🇷', c1: '#74acdf', c2: '#ffffff' },
-    { id: 'es', name: 'Espagne', flag: '🇪🇸', c1: '#c60b1e', c2: '#ffc400' },
-    { id: 'de', name: 'Allemagne', flag: '🇩🇪', c1: '#ffffff', c2: '#000000' },
-    { id: 'pt', name: 'Portugal', flag: '🇵🇹', c1: '#c8102e', c2: '#046a38' },
-    { id: 'gb', name: 'Angleterre', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', c1: '#ffffff', c2: '#cf081f' },
-    { id: 'it', name: 'Italie', flag: '🇮🇹', c1: '#0066cc', c2: '#ffffff' },
-    { id: 'us', name: 'États-Unis', flag: '🇺🇸', c1: '#002868', c2: '#bf0a30' },
-    { id: 'jp', name: 'Japon', flag: '🇯🇵', c1: '#000080', c2: '#ffffff' },
-    { id: 'mx', name: 'Mexique', flag: '🇲🇽', c1: '#006847', c2: '#ce1126' },
+    { id: 'fr', name: 'France', flag: '🇫🇷', c1: '#1f4fd1', c2: '#ffffff', star: 'Mbappé', d: 'v', f: ['#0055a4', '#ffffff', '#ef4135'] },
+    { id: 'bj', name: 'Bénin', flag: '🇧🇯', c1: '#0a8f3c', c2: '#fcd116', star: 'Steve Mounié', d: 'bj', f: ['#008751', '#fcd116', '#e8112d'] },
+    { id: 'ci', name: "Côte d'Ivoire", flag: '🇨🇮', c1: '#f77f00', c2: '#ffffff', star: 'Sébastien Haller', d: 'v', f: ['#f77f00', '#ffffff', '#009e60'] },
+    { id: 'sn', name: 'Sénégal', flag: '🇸🇳', c1: '#00853f', c2: '#fdef42', star: 'Sadio Mané', d: 'v', f: ['#00853f', '#fdef42', '#e31b23'] },
+    { id: 'cm', name: 'Cameroun', flag: '🇨🇲', c1: '#007a5e', c2: '#ce1126', star: 'André Onana', d: 'v', f: ['#007a5e', '#ce1126', '#fcd116'] },
+    { id: 'ma', name: 'Maroc', flag: '🇲🇦', c1: '#c1272d', c2: '#006233', star: 'Achraf Hakimi', d: 'c', f: ['#c1272d', '#c1272d', '#006233'] },
+    { id: 'ng', name: 'Nigeria', flag: '🇳🇬', c1: '#008751', c2: '#ffffff', star: 'Victor Osimhen', d: 'v', f: ['#008751', '#ffffff', '#008751'] },
+    { id: 'gh', name: 'Ghana', flag: '🇬🇭', c1: '#ffffff', c2: '#ce1126', star: 'Mohammed Kudus', d: 'h', f: ['#ce1126', '#fcd116', '#006b3f'] },
+    { id: 'eg', name: 'Égypte', flag: '🇪🇬', c1: '#ce1126', c2: '#ffffff', star: 'Mohamed Salah', d: 'h', f: ['#ce1126', '#ffffff', '#000000'] },
+    { id: 'dz', name: 'Algérie', flag: '🇩🇿', c1: '#006233', c2: '#ffffff', star: 'Riyad Mahrez', d: 'v', f: ['#006233', '#ffffff'] },
+    { id: 'ml', name: 'Mali', flag: '🇲🇱', c1: '#14b53a', c2: '#fcd116', star: 'Yves Bissouma', d: 'v', f: ['#14b53a', '#fcd116', '#ce1126'] },
+    { id: 'tn', name: 'Tunisie', flag: '🇹🇳', c1: '#e70013', c2: '#ffffff', star: 'Ellyes Skhiri', d: 'c', f: ['#e70013', '#ffffff', '#e70013'] },
+    { id: 'br', name: 'Brésil', flag: '🇧🇷', c1: '#ffdf00', c2: '#009c3b', star: 'Vinícius Jr', d: 'c', f: ['#009c3b', '#ffdf00', '#002776'] },
+    { id: 'ar', name: 'Argentine', flag: '🇦🇷', c1: '#74acdf', c2: '#ffffff', star: 'Messi', d: 'h', f: ['#74acdf', '#ffffff', '#74acdf'] },
+    { id: 'es', name: 'Espagne', flag: '🇪🇸', c1: '#c60b1e', c2: '#ffc400', star: 'Lamine Yamal', d: 'h', f: ['#c60b1e', '#ffc400', '#ffc400', '#c60b1e'] },
+    { id: 'de', name: 'Allemagne', flag: '🇩🇪', c1: '#ffffff', c2: '#000000', star: 'Jamal Musiala', d: 'h', f: ['#000000', '#dd0000', '#ffce00'] },
+    { id: 'pt', name: 'Portugal', flag: '🇵🇹', c1: '#c8102e', c2: '#046a38', star: 'Cristiano Ronaldo', d: 'v', f: ['#046a38', '#da291c', '#da291c'] },
+    { id: 'gb', name: 'Angleterre', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', c1: '#ffffff', c2: '#cf081f', star: 'Harry Kane', d: '+', f: ['#ffffff', '#cf081f'] },
+    { id: 'be', name: 'Belgique', flag: '🇧🇪', c1: '#000000', c2: '#fdda24', star: 'Kevin De Bruyne', d: 'v', f: ['#000000', '#fdda24', '#ef3340'] },
+    { id: 'nl', name: 'Pays-Bas', flag: '🇳🇱', c1: '#f36c21', c2: '#ffffff', star: 'Virgil van Dijk', d: 'h', f: ['#ae1c28', '#ffffff', '#21468b'] },
+    { id: 'it', name: 'Italie', flag: '🇮🇹', c1: '#0066cc', c2: '#ffffff', star: 'Gianluigi Donnarumma', d: 'v', f: ['#009246', '#ffffff', '#ce2b37'] },
+    { id: 'hr', name: 'Croatie', flag: '🇭🇷', c1: '#ff0000', c2: '#ffffff', star: 'Luka Modrić', d: 'h', f: ['#ff0000', '#ffffff', '#171796'] },
+    { id: 'no', name: 'Norvège', flag: '🇳🇴', c1: '#ba0c2f', c2: '#ffffff', star: 'Erling Haaland', d: '+', f: ['#ba0c2f', '#00205b'] },
+    { id: 'us', name: 'États-Unis', flag: '🇺🇸', c1: '#002868', c2: '#bf0a30', star: 'Christian Pulisic', d: 'h', f: ['#bf0a30', '#ffffff', '#bf0a30', '#ffffff', '#bf0a30'] },
+    { id: 'jp', name: 'Japon', flag: '🇯🇵', c1: '#000080', c2: '#ffffff', star: 'Kaoru Mitoma', d: 'c', f: ['#ffffff', '#ffffff', '#bc002d'] },
+    { id: 'mx', name: 'Mexique', flag: '🇲🇽', c1: '#006847', c2: '#ce1126', star: 'Raúl Jiménez', d: 'v', f: ['#006847', '#ffffff', '#ce1126'] },
   ];
 
   // Joueurs = disques pleins (vue de dessus, sans gravité)
@@ -53,7 +62,7 @@
     Composite.add(engine.world, [...statics, ball, d0.body, d1.body]);
     const g = {
       engine, ball, dummies: [d0, d1], score: [0, 0], time: opts.time || MATCH_TIME,
-      phase: 'kickoff', phaseT: 1.2, events: [], over: false, lastScorer: -1,
+      phase: 'play', phaseT: 0, events: [], over: false, lastScorer: -1,
     };
     resetPositions(g, -1);
     return g;
@@ -70,15 +79,15 @@
   }
 
   // input : {dx, dy} vecteur normalisé, power 0..1
-  function launch(g, side, inp) {
+  function launch(g, side, inp, cd) {
     const d = g.dummies[side];
     if (g.phase !== 'play' || d.cooldown > 0 || !inp) return false;
     let { dx, dy, power } = inp;
     const len = Math.hypot(dx, dy) || 1; dx /= len; dy /= len;
-    power = Math.max(0.3, Math.min(1, Math.sqrt(power || 0)));
+    power = Math.max(0, Math.min(1, power || 0)); // proportionnel à l'intensité du glissé
     Body.setVelocity(d.body, { x: dx * MAX_SPEED * power, y: dy * MAX_SPEED * power });
     Body.setAngularVelocity(d.body, (Math.random() - 0.5) * 0.4);
-    d.cooldown = COOLDOWN;
+    d.cooldown = cd || COOLDOWN;
     g.events.push({ t: 'launch', side });
     return true;
   }
@@ -104,7 +113,7 @@
     tx += (Math.random() - 0.5) * err; ty += (Math.random() - 0.5) * err;
     const dx = tx - p.x, dy = ty - p.y, dist = Math.hypot(dx, dy);
     if (dist < 15) return;
-    launch(g, side, { dx, dy, power: Math.min(1, 0.4 + dist / 500) * (0.7 + level * 0.1) });
+    launch(g, side, { dx, dy, power: Math.min(1, 0.4 + dist / 500) * (0.7 + level * 0.1) }, 0.35);
   }
 
   function step(g, dt) {

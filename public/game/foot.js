@@ -47,15 +47,24 @@ window.Foot = (function () {
     const yl = top ? 0 : H, yb = top ? -GOAL_D : H + GOAL_D;
     ctx.beginPath(); ctx.moveTo(x0, yl); ctx.lineTo(x0, yb); ctx.lineTo(x0 + GOAL_W, yb); ctx.lineTo(x0 + GOAL_W, yl); ctx.stroke();
   }
-  function drawPlayer(x, y, k, c, me) {
-    ctx.fillStyle = '#0005'; ctx.beginPath(); ctx.arc(x + 4, y + 6, PR, 0, 7); ctx.fill();
-    ctx.fillStyle = COL[k]; ctx.beginPath(); ctx.arc(x, y, PR, 0, 7); ctx.fill();
-    ctx.lineWidth = 7; ctx.strokeStyle = c.c1; ctx.beginPath(); ctx.arc(x, y, PR - 4, 0, 7); ctx.stroke(); // anneau couleur d'équipe
-    ctx.lineWidth = 2; ctx.strokeStyle = '#000a'; ctx.beginPath(); ctx.arc(x, y, PR, 0, 7); ctx.stroke();
-    ctx.fillStyle = '#ffffff40'; ctx.beginPath(); ctx.arc(x - 11, y - 11, 11, 0, 7); ctx.fill();
+  function drawPlayer(x, y, k, c, me) { // disque plat aux couleurs du drapeau
+    ctx.fillStyle = '#0004'; ctx.beginPath(); ctx.arc(x + 2, y + 3, PR + 1, 0, 7); ctx.fill();
     ctx.save(); ctx.translate(x, y); if (flip()) ctx.rotate(Math.PI);
-    ctx.font = '28px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(c.flag, 0, 1);
-    if (me) { ctx.fillStyle = '#ffe066'; ctx.beginPath(); ctx.moveTo(-10, -PR - 18); ctx.lineTo(10, -PR - 18); ctx.lineTo(0, -PR - 6); ctx.fill(); }
+    const R = PR - 6, f = c.f || [c.c1, c.c2];
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.clip();
+    if (c.d === 'c') { ctx.fillStyle = f[0]; ctx.fillRect(-R, -R, 2 * R, 2 * R); ctx.fillStyle = f[1]; ctx.beginPath(); ctx.arc(0, 0, R * 0.72, 0, 7); ctx.fill(); ctx.fillStyle = f[2]; ctx.beginPath(); ctx.arc(0, 0, R * 0.4, 0, 7); ctx.fill(); }
+    else if (c.d === 'bj') { ctx.fillStyle = f[1]; ctx.fillRect(-R, -R, 2 * R, R); ctx.fillStyle = f[2]; ctx.fillRect(-R, 0, 2 * R, R); ctx.fillStyle = f[0]; ctx.fillRect(-R, -R, R * 0.8, 2 * R); }
+    else if (c.d === '+') { ctx.fillStyle = f[0]; ctx.fillRect(-R, -R, 2 * R, 2 * R); ctx.fillStyle = f[1]; ctx.fillRect(-R, -5, 2 * R, 10); ctx.fillRect(-8, -R, 10, 2 * R); }
+    else { const n = f.length, w = 2 * R / n; f.forEach((col, i) => { ctx.fillStyle = col; if (c.d === 'h') ctx.fillRect(-R, -R + i * w, 2 * R, w + 0.5); else ctx.fillRect(-R + i * w, -R, w + 0.5, 2 * R); }); }
+    ctx.restore();
+    ctx.lineWidth = 7; ctx.strokeStyle = COL[k]; ctx.beginPath(); ctx.arc(0, 0, PR - 3.5, 0, 7); ctx.stroke(); // bord = couleur du camp
+    ctx.lineWidth = 1.5; ctx.strokeStyle = '#000a'; ctx.beginPath(); ctx.arc(0, 0, PR, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.stroke();
+    // nom de la star au-dessus du disque
+    const nm = c.star || c.name; ctx.font = 'bold 15px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const tw = ctx.measureText(nm).width + 12; ctx.fillStyle = '#000a'; rr(-tw / 2, -PR - 22, tw, 18, 9); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.fillText(nm, 0, -PR - 13);
+    if (me) { ctx.fillStyle = '#ffe066'; ctx.beginPath(); ctx.moveTo(-8, -PR - 36); ctx.lineTo(8, -PR - 36); ctx.lineTo(0, -PR - 26); ctx.fill(); }
     ctx.restore();
   }
   function drawBall(x, y, a) {
@@ -85,23 +94,22 @@ window.Foot = (function () {
       ctx.fillStyle = '#0008'; rr(tx - 30, ty + PR + 10, 60, 8, 4); ctx.fill();
       ctx.fillStyle = a.power > 0.75 ? '#ff6b6b' : '#ffe066'; rr(tx - 30, ty + PR + 10, 60 * a.power, 8, 4); ctx.fill();
     }
-    if (snap.cd && snap.cd[st.mySide] > 0) {
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(tx, ty, PR + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - snap.cd[st.mySide] / S.COOLDOWN)); ctx.stroke();
-    }
     if (st.shake > 0) st.shake *= 0.9;
   }
 
   function aimFromDrag() {
     const d = st.drag; const dx = d.cur.x - d.start.x, dy = d.cur.y - d.start.y; // le rond part dans le sens du glissé
     const len = Math.hypot(dx, dy);
-    return { dx: dx / (len || 1), dy: dy / (len || 1), power: Math.min(1, len / 110) };
+    // intensité = longueur + vitesse du glissé (linéaire)
+    const now = performance.now(), h = d.hist.filter((q) => now - q.t < 90), q0 = h[0] || d.hist[d.hist.length - 1];
+    const sp = q0 && now > q0.t ? Math.hypot(d.cur.x - q0.x, d.cur.y - q0.y) / Math.max(16, now - q0.t) : 0; // px monde / ms
+    return { dx: dx / (len || 1), dy: dy / (len || 1), power: Math.min(1, 0.55 * len / 260 + 0.45 * sp / 2.2) };
   }
-  cv.addEventListener('pointerdown', (e) => { if (!st) return; cv.setPointerCapture(e.pointerId); const p = toWorld(e.clientX, e.clientY); st.drag = { start: p, cur: p }; });
-  cv.addEventListener('pointermove', (e) => { if (st && st.drag) st.drag.cur = toWorld(e.clientX, e.clientY); });
+  cv.addEventListener('pointerdown', (e) => { if (!st) return; cv.setPointerCapture(e.pointerId); const p = toWorld(e.clientX, e.clientY); st.drag = { start: p, cur: p, hist: [{ x: p.x, y: p.y, t: performance.now() }] }; });
+  cv.addEventListener('pointermove', (e) => { if (st && st.drag) { const p = toWorld(e.clientX, e.clientY); st.drag.cur = p; st.drag.hist.push({ x: p.x, y: p.y, t: performance.now() }); if (st.drag.hist.length > 30) st.drag.hist.shift(); } });
   const up = () => {
     if (!st || !st.drag) return; const a = aimFromDrag(); st.drag = null;
-    if (a.power < 0.08) return;
+    if (a.power < 0.02) return;
     if (st.mode === 'solo') S.launch(st.game, st.mySide, a); else st.socket.emit('input', a);
   };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', () => st && (st.drag = null));
