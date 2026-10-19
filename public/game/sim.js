@@ -5,7 +5,7 @@
 })(typeof self !== 'undefined' ? self : this, function (Matter) {
   const { Engine, Bodies, Body, Composite } = Matter;
   const W = 500, H = 860, GOAL_W = 128, GOAL_D = 40, PR = 30, BR = 17;
-  const MATCH_TIME = 60, COOLDOWN = 0.7, MAX_SPEED = 24;
+  const MATCH_TIME = 180, COOLDOWN = 0.7, MAX_SPEED = 24;
 
   const COUNTRIES = [
     { id: 'fr', name: 'France', flag: '🇫🇷', c1: '#1f4fd1', c2: '#ffffff' },

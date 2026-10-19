@@ -90,7 +90,7 @@ const DB_FILE = path.join(DATA_DIR, 'data.db');
   const user = (id) => pub(get('SELECT * FROM users WHERE id=?', [id]));
 
   function startRoom(room) {
-    room.game = Sim.create(); room.inputs = [null, null];
+    room.game = Sim.create({ time: room.time }); room.inputs = [null, null];
     if (room.players[1].country === room.players[0].country) room.players[1].country = Sim.COUNTRIES.find((c) => c.id !== room.players[0].country).id;
     io.to('r:' + room.code).emit('game:start', { code: room.code, players: room.players.map((p) => ({ user: user(p.uid), country: p.country })) });
     let tick = 0; const dt = 1 / 60;
@@ -140,8 +140,8 @@ const DB_FILE = path.join(DATA_DIR, 'data.db');
     });
     sock.on('msg:read', ({ from }) => run('UPDATE messages SET read=1 WHERE from_id=? AND to_id=?', [+from, uid]));
 
-    sock.on('room:create', ({ country }, cb) => {
-      const room = { code: newCode(), players: [] }; rooms.set(room.code, room);
+    sock.on('room:create', ({ country, time }, cb) => {
+      const room = { code: newCode(), players: [], time: [180, 300, 600].includes(+time) ? +time : 180 }; rooms.set(room.code, room);
       joinRoom(sock, room, country); cb && cb({ code: room.code });
     });
     sock.on('room:join', ({ code, country }, cb) => {

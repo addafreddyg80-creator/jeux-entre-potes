@@ -80,13 +80,8 @@ window.Foot = (function () {
     for (let k = 0; k < 2; k++) drawPlayer(s[3 + k * 3], s[4 + k * 3], k, st.countries[k], k === st.mySide);
     drawBall(s[0], s[1], s[2]);
     const off = 3 + st.mySide * 3, tx = s[off], ty = s[off + 1];
-    if (st.drag && st.drag.cur) {
+    if (st.drag && st.drag.cur) { // jauge de puissance discrète (pas de ligne de visée)
       const a = aimFromDrag();
-      const ready = (snap.cd ? snap.cd[st.mySide] : 0) <= 0;
-      ctx.strokeStyle = ready ? '#ffe066' : '#ffffff55'; ctx.lineWidth = 5; ctx.setLineDash([10, 8]);
-      const L = 60 + 200 * a.power;
-      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + a.dx * L, ty + a.dy * L); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = ctx.strokeStyle; ctx.beginPath(); ctx.arc(tx + a.dx * L, ty + a.dy * L, 7, 0, 7); ctx.fill();
       ctx.fillStyle = '#0008'; rr(tx - 30, ty + PR + 10, 60, 8, 4); ctx.fill();
       ctx.fillStyle = a.power > 0.75 ? '#ff6b6b' : '#ffe066'; rr(tx - 30, ty + PR + 10, 60 * a.power, 8, 4); ctx.fill();
     }
@@ -98,9 +93,9 @@ window.Foot = (function () {
   }
 
   function aimFromDrag() {
-    const d = st.drag; const dx = d.start.x - d.cur.x, dy = d.start.y - d.cur.y; // on tire en arrière (lance-pierre)
+    const d = st.drag; const dx = d.cur.x - d.start.x, dy = d.cur.y - d.start.y; // le rond part dans le sens du glissé
     const len = Math.hypot(dx, dy);
-    return { dx: dx / (len || 1), dy: dy / (len || 1), power: Math.min(1, len / 160) };
+    return { dx: dx / (len || 1), dy: dy / (len || 1), power: Math.min(1, len / 140) };
   }
   cv.addEventListener('pointerdown', (e) => { if (!st) return; cv.setPointerCapture(e.pointerId); const p = toWorld(e.clientX, e.clientY); st.drag = { start: p, cur: p }; });
   cv.addEventListener('pointermove', (e) => { if (st && st.drag) st.drag.cur = toWorld(e.clientX, e.clientY); });
@@ -113,7 +108,7 @@ window.Foot = (function () {
 
   function hud(snap) {
     el('score').textContent = snap.sc[0] + ' - ' + snap.sc[1];
-    el('timer').textContent = snap.t;
+    el('timer').textContent = String(Math.floor(snap.t / 60)).padStart(2, '0') + ':' + String(snap.t % 60).padStart(2, '0');
   }
   function banner(html, ms = 1700) {
     const b = el('banner'); b.innerHTML = html; b.classList.remove('hidden', 'anim'); void b.offsetWidth; b.classList.add('anim');
@@ -170,9 +165,9 @@ window.Foot = (function () {
     st = { ...o, drag: null, shake: 0, buf: [], ended: false };
     el('game').classList.remove('hidden'); el('banner').classList.add('hidden');
     el('hl').innerHTML = `${o.countries[0].flag} ${esc(o.names[0])}`; el('hr').innerHTML = `${esc(o.names[1])} ${o.countries[1].flag}`;
-    if (o.mode === 'solo') { st.game = S.create(); banner('C’EST PARTI !<small>Glisse en arrière et relâche pour te propulser</small>', 2000); }
+    if (o.mode === 'solo') { st.game = S.create({ time: o.time }); banner('C’EST PARTI !<small>Glisse dans la direction où tu veux aller</small>', 2000); }
     else {
-      banner('C’EST PARTI !<small>Glisse en arrière et relâche pour te propulser</small>', 2000);
+      banner('C’EST PARTI !<small>Glisse dans la direction où tu veux aller</small>', 2000);
       st.onState = (m) => { m.at = performance.now(); st.buf.push(m); handleEvents(m.ev); };
       st.onEndMsg = (m) => endMatch(m.winner, m.forfeit);
       o.socket.on('game:state', st.onState); o.socket.on('game:end', st.onEndMsg);
@@ -188,5 +183,5 @@ window.Foot = (function () {
   }
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   el('quit').onclick = () => { const cb = st && st.onQuit; stop(); cb && cb(); };
-  return { start, stop, get active() { return !!st; } };
+  return { start, stop, get active() { return !!st; }, _st: () => st };
 })();

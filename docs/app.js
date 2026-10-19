@@ -15,17 +15,19 @@ function pageFoot() {
   const c = C(country);
   app.innerHTML = `<h1>⚽ Dummies Foot</h1>
   <div class="card"><h2 style="margin-top:0">Ton équipe : <span id="cn">${c.flag} ${c.name}</span></h2><div class="flags">${FootSim.COUNTRIES.map((k) => `<div data-c="${k.id}" class="${k.id === country ? 'sel' : ''}"><b>${k.flag}</b>${k.name}</div>`).join('')}</div></div>
+  <div class="card col"><h2 style="margin:0">⏱️ Durée du match</h2><div class="row"><button class="ghost grow" data-t="180">3 min</button><button class="ghost grow" data-t="300">5 min</button><button class="ghost grow" data-t="600">10 min</button></div></div>
   <div class="card col"><button id="solo">🤖 Jouer en solo contre l’ordi</button>
   <div class="row"><button class="ghost grow" data-l="0">Facile</button><button class="ghost grow" data-l="1">Normal</button><button class="ghost grow" data-l="2.5">Difficile</button></div></div>
   <div class="card col" style="opacity:.6"><h2 style="margin:0">En ligne (1 vs 1)</h2><button class="alt" disabled>Créer un salon</button>
   <div class="row"><input placeholder="CODE" disabled style="text-align:center"><button disabled>Rejoindre</button></div></div>${SOON}
-  <div class="card mut" style="font-size:14px">🎯 <b>Comment jouer :</b> touche l’écran, glisse <b>vers l’arrière</b> (comme un lance-pierre) puis relâche pour propulser ton mannequin. 60 secondes par match !</div>`;
-  let level = 1;
+  <div class="card mut" style="font-size:14px">🎯 <b>Comment jouer :</b> touche l’écran, glisse ton doigt <b>dans la direction où tu veux aller</b> (vers l’avant = attaque, vers l’arrière = défense) puis relâche. Plus tu glisses loin, plus ton rond va vite.</div>`;
+  let level = 1, dur = +localStorage.getItem('dur') || 180;
+  document.querySelectorAll('[data-t]').forEach((b) => { b.classList.toggle('alt', +b.dataset.t === dur); b.onclick = () => { dur = +b.dataset.t; localStorage.setItem('dur', dur); document.querySelectorAll('[data-t]').forEach((x) => x.classList.toggle('alt', x === b)); }; });
   document.querySelectorAll('.flags div').forEach((d) => (d.onclick = () => { country = d.dataset.c; localStorage.setItem('country', country); pageFoot(); }));
   document.querySelectorAll('[data-l]').forEach((b) => { b.classList.toggle('alt', +b.dataset.l === level); b.onclick = () => { level = +b.dataset.l; document.querySelectorAll('[data-l]').forEach((x) => x.classList.toggle('alt', x === b)); }; });
   $('#solo').onclick = () => {
     const cpu = FootSim.COUNTRIES.filter((k) => k.id !== country)[Math.floor(Math.random() * (FootSim.COUNTRIES.length - 1))];
-    Foot.start({ mode: 'solo', mySide: 0, level, countries: [C(country), cpu], names: ['Toi', 'CPU'], onQuit: () => route() });
+    Foot.start({ mode: 'solo', mySide: 0, level, time: dur, countries: [C(country), cpu], names: ['Toi', 'CPU'], onQuit: () => route() });
   };
 }
 function pageRecherche() {
