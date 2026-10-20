@@ -88,31 +88,19 @@ window.Foot = (function () {
     const s = snap.s;
     for (let k = 0; k < 2; k++) drawPlayer(s[3 + k * 3], s[4 + k * 3], k, st.countries[k], k === st.mySide);
     drawBall(s[0], s[1], s[2]);
-    const off = 3 + st.mySide * 3, tx = s[off], ty = s[off + 1];
-    if (st.drag && st.drag.cur) { // jauge de puissance discrète (pas de ligne de visée)
-      const a = aimFromDrag();
-      ctx.fillStyle = '#0008'; rr(tx - 30, ty + PR + 10, 60, 8, 4); ctx.fill();
-      ctx.fillStyle = a.power > 0.75 ? '#ff6b6b' : '#ffe066'; rr(tx - 30, ty + PR + 10, 60 * a.power, 8, 4); ctx.fill();
-    }
     if (st.shake > 0) st.shake *= 0.9;
   }
 
-  function aimFromDrag() {
-    const d = st.drag; const dx = d.cur.x - d.start.x, dy = d.cur.y - d.start.y; // le rond part dans le sens du glissé
-    const len = Math.hypot(dx, dy);
-    // intensité = longueur + vitesse du glissé (linéaire)
-    const now = performance.now(), h = d.hist.filter((q) => now - q.t < 90), q0 = h[0] || d.hist[d.hist.length - 1];
-    const sp = q0 && now > q0.t ? Math.hypot(d.cur.x - q0.x, d.cur.y - q0.y) / Math.max(16, now - q0.t) : 0; // px monde / ms
-    return { dx: dx / (len || 1), dy: dy / (len || 1), power: Math.min(1, 0.55 * len / 260 + 0.45 * sp / 2.2) };
+  // le disque suit le doigt (pas de tir par glissé : on frappe la balle en la percutant)
+  function setTarget(p) {
+    st.target = p;
+    if (st.mode === 'solo') S.move(st.game, st.mySide, p);
+    else { const n = performance.now(); if (!p || n - (st.sent || 0) > 15) { st.sent = n; st.socket.emit('input', p ? { x: Math.round(p.x), y: Math.round(p.y) } : null); } }
   }
-  cv.addEventListener('pointerdown', (e) => { if (!st) return; cv.setPointerCapture(e.pointerId); const p = toWorld(e.clientX, e.clientY); st.drag = { start: p, cur: p, hist: [{ x: p.x, y: p.y, t: performance.now() }] }; });
-  cv.addEventListener('pointermove', (e) => { if (st && st.drag) { const p = toWorld(e.clientX, e.clientY); st.drag.cur = p; st.drag.hist.push({ x: p.x, y: p.y, t: performance.now() }); if (st.drag.hist.length > 30) st.drag.hist.shift(); } });
-  const up = () => {
-    if (!st || !st.drag) return; const a = aimFromDrag(); st.drag = null;
-    if (a.power < 0.02) return;
-    if (st.mode === 'solo') S.launch(st.game, st.mySide, a); else st.socket.emit('input', a);
-  };
-  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', () => st && (st.drag = null));
+  cv.addEventListener('pointerdown', (e) => { if (!st) return; e.preventDefault(); cv.setPointerCapture(e.pointerId); st.pid = e.pointerId; setTarget(toWorld(e.clientX, e.clientY)); });
+  cv.addEventListener('pointermove', (e) => { if (st && st.target && e.pointerId === st.pid) setTarget(toWorld(e.clientX, e.clientY)); });
+  const up = (e) => { if (st && e.pointerId === st.pid) { st.pid = null; setTarget(null); } };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
 
   function hud(snap) {
     el('score').textContent = snap.sc[0] + ' - ' + snap.sc[1];
@@ -130,7 +118,6 @@ window.Foot = (function () {
   function handleEvents(evs) {
     for (const e of evs || []) {
       if (e.t === 'goal') { const c = st.countries[e.side]; banner(`BUT ! <small>${c.flag} ${st.names[e.side]}</small>`); st.shake = 18; sound(523, 0.2); setTimeout(() => sound(784, 0.4), 150); navigator.vibrate && navigator.vibrate(200); }
-      if (e.t === 'launch' && e.side === st.mySide) sound(200, 0.08, 'triangle', 0.08);
       if (e.t === 'start') sound(880, 0.25, 'sine', 0.06);
       if (e.t === 'end') endMatch(e.winner);
     }
@@ -170,18 +157,16 @@ window.Foot = (function () {
 
   function start(o) {
     resize();
-    st = { ...o, drag: null, shake: 0, buf: [], ended: false };
+    st = { ...o, target: null, shake: 0, buf: [], ended: false };
     el('game').classList.remove('hidden'); el('banner').classList.add('hidden');
     el('hl').innerHTML = `${o.countries[0].flag} ${esc(o.names[0])}`; el('hr').innerHTML = `${esc(o.names[1])} ${o.countries[1].flag}`;
-    if (o.mode === 'solo') { st.game = S.create({ time: o.time }); banner('C’EST PARTI !<small>Glisse dans la direction où tu veux aller</small>', 2000); }
+    if (o.mode === 'solo') { st.game = S.create({ time: o.time }); }
     else {
-      banner('C’EST PARTI !<small>Glisse dans la direction où tu veux aller</small>', 2000);
       st.onState = (m) => { m.at = performance.now(); st.buf.push(m); handleEvents(m.ev); };
       st.onEndMsg = (m) => endMatch(m.winner, m.forfeit);
       o.socket.on('game:state', st.onState); o.socket.on('game:end', st.onEndMsg);
     }
-    try { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {}
-    st.raf = requestAnimationFrame(loop);
+    loop(performance.now()); // premier rendu immédiat, sans attendre
   }
   function stop() {
     if (!st) return; cancelAnimationFrame(st.raf);

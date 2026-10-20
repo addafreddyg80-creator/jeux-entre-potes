@@ -90,13 +90,13 @@ const DB_FILE = path.join(DATA_DIR, 'data.db');
   const user = (id) => pub(get('SELECT * FROM users WHERE id=?', [id]));
 
   function startRoom(room) {
-    room.game = Sim.create({ time: room.time }); room.inputs = [null, null];
+    room.game = Sim.create({ time: room.time }); room.inputs = [undefined, undefined];
     if (room.players[1].country === room.players[0].country) room.players[1].country = Sim.COUNTRIES.find((c) => c.id !== room.players[0].country).id;
     io.to('r:' + room.code).emit('game:start', { code: room.code, players: room.players.map((p) => ({ user: user(p.uid), country: p.country })) });
     let tick = 0; const dt = 1 / 60;
     room.loop = setInterval(() => {
       const g = room.game;
-      for (let i = 0; i < 2; i++) if (room.inputs[i]) { Sim.launch(g, i, room.inputs[i]); room.inputs[i] = null; }
+      for (let i = 0; i < 2; i++) if (room.inputs[i] !== undefined) { Sim.move(g, i, room.inputs[i]); room.inputs[i] = undefined; }
       Sim.step(g, dt);
       const evs = g.events.slice();
       if (++tick % 2 === 0 || evs.length) io.to('r:' + room.code).emit('game:state', { ...Sim.snapshot(g), ev: evs });
@@ -163,7 +163,7 @@ const DB_FILE = path.join(DATA_DIR, 'data.db');
     sock.on('input', (inp) => {
       const room = rooms.get(sock.data.room); if (!room || !room.loop) return;
       const i = room.players.findIndex((p) => p.sid === sock.id);
-      if (i >= 0 && inp && isFinite(inp.dx) && isFinite(inp.dy)) room.inputs[i] = { dx: +inp.dx, dy: +inp.dy, power: +inp.power };
+      if (i >= 0) room.inputs[i] = inp && isFinite(inp.x) && isFinite(inp.y) ? { x: +inp.x, y: +inp.y } : null;
     });
     sock.on('room:leave', () => leaveRoom(sock));
     sock.on('disconnect', () => {

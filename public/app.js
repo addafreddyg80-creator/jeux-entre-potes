@@ -85,7 +85,7 @@ function pageFoot() {
   <div class="card col"><h2 style="margin:0">En ligne (1 vs 1)</h2><button class="alt" id="create">Créer un salon</button>
   <div class="row"><input id="code" placeholder="CODE" maxlength="5" style="text-transform:uppercase;letter-spacing:4px;text-align:center"><button id="join">Rejoindre</button></div>
   <div class="mut" style="font-size:14px">Ou défie un joueur depuis son profil 🔎</div></div>
-  <div class="card mut" style="font-size:14px">🎯 <b>Comment jouer :</b> touche l’écran, glisse ton doigt <b>dans la direction où tu veux aller</b> (vers l’avant = attaque, vers l’arrière = défense) puis relâche. Plus tu glisses loin, plus ton rond va vite.</div>`;
+  <div class="card mut" style="font-size:14px">🎯 <b>Comment jouer :</b> pose ton doigt sur ton palet et déplace-le : il <b>suit ton doigt</b>. Pour tirer, fonce dans la balle : plus tu vas vite, plus la frappe est forte.</div>`;
   let level = 1, dur = [45, 60, 90, 120].includes(+localStorage.getItem("dur")) ? +localStorage.getItem("dur") : 60;
   document.querySelectorAll('[data-dur]').forEach((b) => { b.classList.toggle('alt', +b.dataset.dur === dur); b.onclick = () => { dur = +b.dataset.dur; localStorage.setItem('dur', dur); document.querySelectorAll('[data-dur]').forEach((x) => x.classList.toggle('alt', x === b)); }; });
   document.querySelectorAll('.flags div').forEach((d) => (d.onclick = () => { country = d.dataset.c; localStorage.setItem('country', country); pageFoot(); }));

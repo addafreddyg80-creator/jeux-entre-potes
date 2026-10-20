@@ -5,7 +5,7 @@
 })(typeof self !== 'undefined' ? self : this, function (Matter) {
   const { Engine, Bodies, Body, Composite } = Matter;
   const W = 500, H = 860, GOAL_W = 128, GOAL_D = 40, PR = 38, BR = 17;
-  const MATCH_TIME = 60, COOLDOWN = 0.08, MAX_SPEED = 32;
+  const MATCH_TIME = 60, COOLDOWN = 0, MAX_SPEED = 26;
 
   // f: couleurs du drapeau, d: 'v' bandes verticales, 'h' horizontales, 'c' concentrique, '+' croix
   const COUNTRIES = [
@@ -39,7 +39,7 @@
 
   // Joueurs = disques pleins (vue de dessus, sans gravité)
   function makeDummy(x, y, side) {
-    const body = Bodies.circle(x, y, PR, { restitution: 0.6, friction: 0.02, frictionAir: 0.022, density: 0.0019 });
+    const body = Bodies.circle(x, y, PR, { restitution: 0.3, friction: 0.02, frictionAir: 0.02, density: 0.02, inertia: Infinity });
     return { body, torso: body, parts: [body], side, cooldown: 0, home: { x, y } };
   }
 
@@ -70,7 +70,7 @@
 
   function resetPositions(g, towards) {
     for (const d of g.dummies) {
-      Body.setPosition(d.body, d.home); Body.setVelocity(d.body, { x: 0, y: 0 }); Body.setAngle(d.body, 0); Body.setAngularVelocity(d.body, 0); d.cooldown = 0;
+      Body.setPosition(d.body, d.home); Body.setVelocity(d.body, { x: 0, y: 0 }); Body.setAngle(d.body, 0); Body.setAngularVelocity(d.body, 0); d.cooldown = 0; d.target = null;
     }
     Body.setPosition(g.ball, { x: W / 2, y: H / 2 });
     // engagement : léger avantage à celui qui a encaissé
@@ -78,42 +78,45 @@
     Body.setAngularVelocity(g.ball, 0);
   }
 
-  // input : {dx, dy} vecteur normalisé, power 0..1
-  function launch(g, side, inp, cd) {
+  // Contrôle "air hockey" : le disque suit le doigt (cible) ; t = {x,y} ou null (doigt levé)
+  const MOVE_K = 0.5; // fraction de la distance parcourue par pas (réactivité)
+  function move(g, side, t, maxSp) {
     const d = g.dummies[side];
-    if (g.phase !== 'play' || d.cooldown > 0 || !inp) return false;
-    let { dx, dy, power } = inp;
-    const len = Math.hypot(dx, dy) || 1; dx /= len; dy /= len;
-    power = Math.max(0, Math.min(1, power || 0)); // proportionnel à l'intensité du glissé
-    Body.setVelocity(d.body, { x: dx * MAX_SPEED * power, y: dy * MAX_SPEED * power });
-    Body.setAngularVelocity(d.body, (Math.random() - 0.5) * 0.4);
-    d.cooldown = cd || COOLDOWN;
-    g.events.push({ t: 'launch', side });
-    return true;
+    if (!t || !isFinite(t.x) || !isFinite(t.y)) { d.target = null; return; }
+    const m = PR + 2, x = Math.max(m, Math.min(W - m, t.x));
+    // chacun reste dans sa moitié (un peu au-delà de la ligne médiane)
+    const y = side === 0 ? Math.max(H / 2 - 60, Math.min(H - m, t.y)) : Math.max(m, Math.min(H / 2 + 60, t.y));
+    d.target = { x, y }; d.maxSp = maxSp || MAX_SPEED;
+  }
+  function drive(g) {
+    for (const d of g.dummies) {
+      const p = d.body.position, v = d.body.velocity;
+      if (!d.target) { Body.setVelocity(d.body, { x: v.x * 0.85, y: v.y * 0.85 }); continue; }
+      let vx = (d.target.x - p.x) * MOVE_K, vy = (d.target.y - p.y) * MOVE_K;
+      const sp = Math.hypot(vx, vy), mx = d.maxSp || MAX_SPEED;
+      if (sp > mx) { vx *= mx / sp; vy *= mx / sp; }
+      Body.setVelocity(d.body, { x: vx, y: vy }); Body.setAngularVelocity(d.body, 0);
+    }
   }
 
   function botThink(g, side, dt, level = 1) {
     const d = g.dummies[side];
-    if (g.phase !== 'play' || d.cooldown > 0) return;
-    if (Math.random() > dt * (1.2 + level)) return; // temps de réaction
+    if (g.phase !== 'play') { d.target = null; return; }
+    d.think = (d.think || 0) - dt; if (d.think > 0) return; d.think = 0.12 - level * 0.03; // temps de réaction
     const b = g.ball.position, p = d.body.position;
-    const goal = { x: W / 2, y: side === 0 ? -GOAL_D : H + GOAL_D }; // but visé
+    const goal = { x: W / 2, y: side === 0 ? -GOAL_D : H + GOAL_D };
     const own = side === 0 ? H : 0;
-    const err = (3 - level) * 25;
+    const err = (3 - level) * 20;
     let tx, ty;
-    const behind = side === 1 ? p.y < b.y : p.y > b.y; // le bot est entre son but et la balle
-    if (behind) {
-      // viser un point derrière la balle, aligné vers le but adverse
-      let ux = b.x - goal.x, uy = b.y - goal.y; const l = Math.hypot(ux, uy) || 1;
-      tx = b.x + ux / l * (BR + PR - 10); ty = b.y + uy / l * (BR + PR - 10);
-    } else {
-      // revenir défendre côté de son propre but
-      tx = (b.x + W / 2) / 2; ty = own + (side === 1 ? 110 : -110);
-    }
+    const behind = side === 1 ? p.y < b.y - 10 : p.y > b.y + 10;
+    const inHalf = side === 1 ? b.y < H / 2 + 40 : b.y > H / 2 - 40;
+    if (behind && inHalf) { // foncer à travers la balle vers le but adverse
+      let ux = goal.x - b.x, uy = goal.y - b.y; const l = Math.hypot(ux, uy) || 1;
+      tx = b.x + ux / l * 40; ty = b.y + uy / l * 40;
+    } else if (behind) { tx = (b.x + W / 2) / 2; ty = own + (side === 1 ? 160 : -160); }
+    else { tx = (b.x + W / 2) / 2; ty = own + (side === 1 ? 90 : -90); } // revenir défendre
     tx += (Math.random() - 0.5) * err; ty += (Math.random() - 0.5) * err;
-    const dx = tx - p.x, dy = ty - p.y, dist = Math.hypot(dx, dy);
-    if (dist < 15) return;
-    launch(g, side, { dx, dy, power: Math.min(1, 0.4 + dist / 500) * (0.7 + level * 0.1) }, 0.35);
+    move(g, side, { x: tx, y: ty }, 6 + level * 3);
   }
 
   function step(g, dt) {
@@ -130,6 +133,7 @@
       }
       return g;
     }
+    drive(g);
     Engine.update(g.engine, dt * 1000);
     const bv = g.ball.velocity, sp = Math.hypot(bv.x, bv.y);
     if (sp > 26) Body.setVelocity(g.ball, { x: bv.x * 26 / sp, y: bv.y * 26 / sp });
@@ -141,7 +145,7 @@
     return g;
   }
   function goal(g, scorer) {
-    g.score[scorer]++; g.lastScorer = scorer; g.phase = 'goal'; g.phaseT = 2.2;
+    g.score[scorer]++; g.lastScorer = scorer; g.phase = 'goal'; g.phaseT = 1.2;
     g.events.push({ t: 'goal', side: scorer });
     return g;
   }
@@ -160,5 +164,5 @@
     return { s, sc: g.score, t: Math.ceil(g.time), ph: g.phase, cd: g.dummies.map((d) => r(d.cooldown)) };
   }
   // état "rendu" depuis la sim locale (même format)
-  return { W, H, GOAL_W, GOAL_D, PR, BR, COUNTRIES, MATCH_TIME, COOLDOWN, create, step, launch, botThink, snapshot };
+  return { W, H, GOAL_W, GOAL_D, PR, BR, COUNTRIES, MATCH_TIME, COOLDOWN, create, step, move, botThink, snapshot };
 });
