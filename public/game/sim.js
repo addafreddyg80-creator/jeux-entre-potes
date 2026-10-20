@@ -34,6 +34,12 @@
     { id: 'no', name: 'Norvège', flag: '🇳🇴', c1: '#ba0c2f', c2: '#ffffff', star: 'Erling Haaland', d: '+', f: ['#ba0c2f', '#00205b'] },
     { id: 'us', name: 'États-Unis', flag: '🇺🇸', c1: '#002868', c2: '#bf0a30', star: 'Christian Pulisic', d: 'h', f: ['#bf0a30', '#ffffff', '#bf0a30', '#ffffff', '#bf0a30'] },
     { id: 'jp', name: 'Japon', flag: '🇯🇵', c1: '#000080', c2: '#ffffff', star: 'Kaoru Mitoma', d: 'c', f: ['#ffffff', '#ffffff', '#bc002d'] },
+    { id: 'kr', name: 'Corée du Sud', flag: '🇰🇷', c1: '#ffffff', c2: '#cd2e3a', star: 'Son Heung-min', d: 'c', f: ['#ffffff', '#ffffff', '#cd2e3a'] },
+    { id: 'uy', name: 'Uruguay', flag: '🇺🇾', c1: '#5cbfeb', c2: '#ffffff', star: 'Federico Valverde', d: 'h', f: ['#ffffff', '#0038a8', '#ffffff', '#0038a8', '#ffffff'] },
+    { id: 'co', name: 'Colombie', flag: '🇨🇴', c1: '#fcd116', c2: '#003893', star: 'Luis Díaz', d: 'h', f: ['#fcd116', '#fcd116', '#003893', '#ce1126'] },
+    { id: 'ch', name: 'Suisse', flag: '🇨🇭', c1: '#da291c', c2: '#ffffff', star: 'Granit Xhaka', d: '+', f: ['#da291c', '#ffffff'] },
+    { id: 'pl', name: 'Pologne', flag: '🇵🇱', c1: '#ffffff', c2: '#dc143c', star: 'Robert Lewandowski', d: 'h', f: ['#ffffff', '#dc143c'] },
+    { id: 'dk', name: 'Danemark', flag: '🇩🇰', c1: '#c60c30', c2: '#ffffff', star: 'Christian Eriksen', d: '+', f: ['#c60c30', '#ffffff'] },
     { id: 'mx', name: 'Mexique', flag: '🇲🇽', c1: '#006847', c2: '#ce1126', star: 'Raúl Jiménez', d: 'v', f: ['#006847', '#ffffff', '#ce1126'] },
   ];
 

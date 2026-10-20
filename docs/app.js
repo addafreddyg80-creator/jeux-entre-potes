@@ -16,6 +16,7 @@ function pageFoot() {
   app.innerHTML = `<h1>⚽ Dummies Foot</h1>
   <div class="card"><h2 style="margin-top:0">Ton équipe : <span id="cn">${c.flag} ${c.name}</span></h2><div class="flags">${FootSim.COUNTRIES.map((k) => `<div data-c="${k.id}" class="${k.id === country ? 'sel' : ''}"><b>${k.flag}</b>${k.name}</div>`).join('')}</div></div>
   <div class="card col"><h2 style="margin:0">⏱️ Durée du match</h2><div class="row"><button class="ghost grow" data-dur="45">45 s</button><button class="ghost grow" data-dur="60">1 min</button><button class="ghost grow" data-dur="90">1 min 30</button><button class="ghost grow" data-dur="120">2 min</button></div></div>
+  <div class="card col"><button id="cup">🏆 Coupe du monde</button></div>
   <div class="card col"><button id="solo">🤖 Jouer en solo contre l’ordi</button>
   <div class="row"><button class="ghost grow" data-l="0">Facile</button><button class="ghost grow" data-l="1">Normal</button><button class="ghost grow" data-l="2.5">Difficile</button></div></div>
   <div class="card col" style="opacity:.6"><h2 style="margin:0">En ligne (1 vs 1)</h2><button class="alt" disabled>Créer un salon</button>
@@ -25,6 +26,8 @@ function pageFoot() {
   document.querySelectorAll('[data-dur]').forEach((b) => { b.classList.toggle('alt', +b.dataset.dur === dur); b.onclick = () => { dur = +b.dataset.dur; localStorage.setItem('dur', dur); document.querySelectorAll('[data-dur]').forEach((x) => x.classList.toggle('alt', x === b)); }; });
   document.querySelectorAll('.flags div').forEach((d) => (d.onclick = () => { country = d.dataset.c; localStorage.setItem('country', country); pageFoot(); }));
   document.querySelectorAll('[data-l]').forEach((b) => { b.classList.toggle('alt', +b.dataset.l === level); b.onclick = () => { level = +b.dataset.l; document.querySelectorAll('[data-l]').forEach((x) => x.classList.toggle('alt', x === b)); }; });
+  $('#cup').onclick = () => Cup.open(app, { country, onCountry: (id) => { country = id; localStorage.setItem('country', id); }, onBack: () => pageFoot(),
+    play: (m) => Foot.start({ mode: 'solo', mySide: 0, level: m.level, time: dur, countries: [m.me, m.opp], names: ['Toi', m.opp.name], onEnd: () => { const sc = Foot._st().game.score; m.onEnd(sc[0], sc[1]); }, onQuit: m.onQuit }) });
   $('#solo').onclick = () => {
     const cpu = FootSim.COUNTRIES.filter((k) => k.id !== country)[Math.floor(Math.random() * (FootSim.COUNTRIES.length - 1))];
     Foot.start({ mode: 'solo', mySide: 0, level, time: dur, countries: [C(country), cpu], names: ['Toi', 'CPU'], onQuit: () => route() });

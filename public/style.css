@@ -56,3 +56,6 @@ nav#tabs .badge{position:absolute;top:4px;left:55%}
 @keyframes but{0%{transform:translate(-50%,-50%) scale(.2) rotate(-20deg);opacity:0}25%{transform:translate(-50%,-50%) scale(1.25) rotate(4deg);opacity:1}40%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(-50%,-50%) scale(1)}}
 
 #hud{max-width:calc(100vw - 110px);gap:8px;padding:6px 10px}#hud .team{font-size:12px;max-width:28vw;overflow:hidden;white-space:nowrap}#banner{font-size:min(16vw,110px)}
+table.cup{width:100%;border-collapse:collapse;font-size:14px}table.cup td,table.cup th{padding:5px 4px;text-align:left}table.cup th{opacity:.6;font-weight:600}
+table.cup tr.q td:first-child{color:#22d3a6;font-weight:700}table.cup tr.me{background:#ffe06622}
+.kom{display:flex;justify-content:space-between;gap:6px;padding:6px 4px;font-size:14px;border-bottom:1px solid #fff1}.kom span{flex:1}.kom span:last-child{text-align:right}.kom.me{background:#ffe06622;border-radius:8px}
