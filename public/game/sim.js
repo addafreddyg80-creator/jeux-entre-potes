@@ -84,8 +84,8 @@
     const d = g.dummies[side];
     if (!t || !isFinite(t.x) || !isFinite(t.y)) { d.target = null; return; }
     const m = PR + 2, x = Math.max(m, Math.min(W - m, t.x));
-    // chacun reste dans sa moitié (un peu au-delà de la ligne médiane)
-    const y = side === 0 ? Math.max(H / 2 - 60, Math.min(H - m, t.y)) : Math.max(m, Math.min(H / 2 + 60, t.y));
+    // tout le terrain est accessible (sans entrer dans les cages)
+    const y = Math.max(m, Math.min(H - m, t.y));
     d.target = { x, y }; d.maxSp = maxSp || MAX_SPEED;
   }
   function drive(g) {
@@ -109,8 +109,7 @@
     const err = (3 - level) * 20;
     let tx, ty;
     const behind = side === 1 ? p.y < b.y - 10 : p.y > b.y + 10;
-    const inHalf = side === 1 ? b.y < H / 2 + 40 : b.y > H / 2 - 40;
-    if (behind && inHalf) { // foncer à travers la balle vers le but adverse
+    if (behind) { // attaque partout sur le terrain // foncer à travers la balle vers le but adverse
       let ux = goal.x - b.x, uy = goal.y - b.y; const l = Math.hypot(ux, uy) || 1;
       tx = b.x + ux / l * 40; ty = b.y + uy / l * 40;
     } else if (behind) { tx = (b.x + W / 2) / 2; ty = own + (side === 1 ? 160 : -160); }
