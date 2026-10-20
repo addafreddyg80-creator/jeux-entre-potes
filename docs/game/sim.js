@@ -4,7 +4,7 @@
   else root.FootSim = factory(root.Matter);
 })(typeof self !== 'undefined' ? self : this, function (Matter) {
   const { Engine, Bodies, Body, Composite } = Matter;
-  const W = 500, H = 860, GOAL_W = 128, GOAL_D = 40, PR = 38, BR = 17;
+  const W = 500, H = 860, GOAL_W = 128, GOAL_D = 40, PR = 44, BR = 17;
   const MATCH_TIME = 60, COOLDOWN = 0, MAX_SPEED = 26;
 
   // f: couleurs du drapeau, d: 'v' bandes verticales, 'h' horizontales, 'c' concentrique, '+' croix
@@ -46,7 +46,7 @@
   function create(opts = {}) {
     const engine = Engine.create({ gravity: { x: 0, y: 0 } });
     engine.positionIterations = 8; engine.velocityIterations = 6;
-    const st = { isStatic: true, friction: 0, restitution: 0.8 };
+    const st = { isStatic: true, friction: 0, frictionStatic: 0, restitution: 1 };
     const gx0 = (W - GOAL_W) / 2, gx1 = (W + GOAL_W) / 2, T = 60;
     const side = (x0, x1, y) => Bodies.rectangle((x0 + x1) / 2, y, x1 - x0, T, st);
     const statics = [
@@ -57,7 +57,7 @@
       // coins arrondis (évite les blocages)
       ...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Bodies.rectangle(x, y, 60, 60, { ...st, angle: Math.PI / 4 })),
     ];
-    const ball = Bodies.circle(W / 2, H / 2, BR, { restitution: 0.85, friction: 0.01, frictionAir: 0.012, density: 0.0012 });
+    const ball = Bodies.circle(W / 2, H / 2, BR, { restitution: 1, friction: 0, frictionStatic: 0, frictionAir: 0, density: 0.0012 });
     const d0 = makeDummy(W / 2, H - 150, 0), d1 = makeDummy(W / 2, 150, 1);
     Composite.add(engine.world, [...statics, ball, d0.body, d1.body]);
     const g = {
@@ -74,7 +74,7 @@
     }
     Body.setPosition(g.ball, { x: W / 2, y: H / 2 });
     // engagement : léger avantage à celui qui a encaissé
-    Body.setVelocity(g.ball, { x: 0, y: towards === 0 ? 1.2 : towards === 1 ? -1.2 : 0 });
+    Body.setVelocity(g.ball, { x: 0, y: towards === 0 ? 5 : -5 });
     Body.setAngularVelocity(g.ball, 0);
   }
 
@@ -134,14 +134,32 @@
     }
     drive(g);
     Engine.update(g.engine, dt * 1000);
-    const bv = g.ball.velocity, sp = Math.hypot(bv.x, bv.y);
-    if (sp > 26) Body.setVelocity(g.ball, { x: bv.x * 26 / sp, y: bv.y * 26 / sp });
+    keepBallAlive(g, dt);
     const b = g.ball.position;
     if (b.y < -BR) return goal(g, 0); // but du haut : marqué par le joueur du bas (0)
     if (b.y > H + BR) return goal(g, 1);
     g.time -= dt;
     if (g.time <= 0) { g.time = 0; return finish(g); }
     return g;
+  }
+  // La balle ne s'arrête jamais : vitesse min/max + anti-blocage dans les coins
+  const BALL_MIN = 5, BALL_MAX = 22;
+  function keepBallAlive(g, dt) {
+    const ball = g.ball, p = ball.position;
+    let { x: vx, y: vy } = ball.velocity, sp = Math.hypot(vx, vy);
+    if (sp < 0.05) { const a = Math.random() * Math.PI * 2; vx = Math.cos(a); vy = Math.sin(a); sp = 1; }
+    // jamais trop horizontale (sinon ping-pong infini entre les murs)
+    if (Math.abs(vy) < sp * 0.15) { vy = (vy >= 0 ? 1 : -1) * sp * 0.15; sp = Math.hypot(vx, vy); }
+    const t = Math.max(BALL_MIN, Math.min(BALL_MAX, sp));
+    vx *= t / sp; vy *= t / sp;
+    // coincée près d'un coin / mur : on la relance vers le centre
+    const near = (p.x < BR + 40 || p.x > W - BR - 40) && (p.y < BR + 50 || p.y > H - BR - 50);
+    ball.stuckT = near ? (ball.stuckT || 0) + dt : 0;
+    if (ball.stuckT > 0.6) {
+      const dx = W / 2 - p.x, dy = H / 2 - p.y, l = Math.hypot(dx, dy) || 1;
+      vx = dx / l * 9; vy = dy / l * 9; ball.stuckT = 0;
+    }
+    Body.setVelocity(ball, { x: vx, y: vy });
   }
   function goal(g, scorer) {
     g.score[scorer]++; g.lastScorer = scorer; g.phase = 'goal'; g.phaseT = 1.2;
